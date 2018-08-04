@@ -1,0 +1,6 @@
+"Left" = meta : all : f.exec "xmmsctrl prev"
+"Right" = meta : all : f.exec "sh -c 'if xmmsctrl playing; then if xmmsctrl paused; then xmmsctrl pause; else xmmsctrl next; fi; else xmmsctrl play; fi'"
+"Down" = meta : all : f.exec "sh -c 'if xmmsctrl playing; then if xmmsctrl paused; then xmmsctrl stop; else xmmsctrl pause; fi; else xmmsctrl play; fi'"
+"Left" = meta shift : all : f.exec "xmmsctrl vol -10"
+"Right" = meta shift : all : f.exec "xmmsctrl vol +10"
+"Up" = meta : all : f.exec "if window_shown 'XMMS Playlist'; then xmmsctrl play_list 0; else xmmsctrl play_list 1; fi"

@@ -1,0 +1,14 @@
+This is a small utility to control xmms from
+the command line or a shell. The interest
+comes with key bindings in a window manager.
+I give my key bindings for twm to show how
+to program some keys. I'm using a small script
+window_shown to test the state of windows.
+
+xmmsctrl without argument will print a summary
+of commands. They are pretty straight forward.
+The file twmrc_bindings contains examples on
+how to use test commands.
+
+The samples directory contains sample scripts
+to illustrate how to use xmmsctrl.

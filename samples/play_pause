@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if xmmsctrl running; then
+ if xmmsctrl playing; then
+  xmmsctrl pause
+ else
+  xmmsctrl play
+ fi
+else
+ xmmsctrl launch play
+fi
