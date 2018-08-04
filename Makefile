@@ -9,7 +9,9 @@ DIRNAME  := $(shell basename $(PWD))
 CC       := gcc
 WARN     := -Wall -Wshadow -Wmissing-prototypes -W
 DEFS     := -DPRETTY_PRINT -D_GNU_SOURCE -DVERSION=\"$(VERSION)\"
-CFLAGS   := $(WARN) -O2 $(shell xmms-config --cflags) $(DEFS)
+# -std=c89 fixes this build failure:
+# https://www.linuxquestions.org/questions/slackware-14/slackware-14-2-beta2-11feb2016-libdv-fails-to-compile-4175572279/#post5500310
+CFLAGS   := $(WARN) -O2 $(shell xmms-config --cflags) $(DEFS) -std=c89
 LDFLAGS  := $(shell xmms-config --libs)
 
 all : $(TARGET) HELP
