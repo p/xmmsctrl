@@ -3,7 +3,7 @@
 PREFIX   = /usr/local
 
 TARGET   = xmmsctrl
-VERSION  = 1.6
+VERSION  = 1.7
 DIRNAME  = $(shell basename $(PWD))
 
 CC       = gcc

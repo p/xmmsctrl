@@ -48,6 +48,7 @@ static void print_current_title(gint); /* print the title of the current playing
 static void print_playlist(gint);      /* print all titles in the play list */
 static void print_playfiles(gint);     /* print all files in the play list */
 static void remove_from_playlist(gint);/* removes mp3 from playlist currently playing  */
+static void print_length(gint session);/* print the length of the playlist */
 static void print_current(gint);       /* print the current playing song */
 static void print_help(gint);          /* print help   */
 static void print_volume(gint);        /* print volume */
@@ -83,8 +84,13 @@ Command com[]={
     "open xmms \"Load file(s)\" dialog window"
   },
   {
+    "getlength" ,
+    print_length ,
+    "print the length of the play list"
+  },
+  {
     "getpos" , 
-    print_current_pos,
+    print_current_pos ,
     "print the current mp3 song position in the play list"
   },
   {
@@ -287,7 +293,8 @@ ArgCommand argcom[]={
   {
     "track" ,
     set_track ,
-    "track <n> : set the n'th track in the play list as the current track"
+    "track <n> : set the n'th track in the play list as the current track\n"
+    "track last : set the last track in the play list as the current track"
   },
   {
     "vol" ,
@@ -307,6 +314,13 @@ ArgCommand argcom[]={
 #define NTOG (sizeof(toggle)/sizeof(ToggleCommand))
 #define NARG (sizeof(argcom)/sizeof(ArgCommand))
 
+
+/*
+ * wrap function to print the length of the playlist
+ */
+static void print_length(gint session) {
+  printf("%d\n", xmms_remote_get_playlist_length(session));
+}
 
 /*
  * wrap function to print the current played mp3 file
@@ -444,10 +458,15 @@ static void remove_from_playlist(gint session) {
 
 
 /*
- * track command: needs a track number
+ * track command: needs a track number or "last"
  */
 static void set_track(gint session, char *arg) {
-  int pos = atoi(arg);
+  int pos;
+
+  if (!strcmp(arg, "last"))
+    pos = xmms_remote_get_playlist_length(session);
+  else
+    pos = atoi(arg);
 
   if (pos > 0)
     xmms_remote_set_playlist_pos(session, pos-1);

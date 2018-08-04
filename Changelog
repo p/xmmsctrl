@@ -16,7 +16,7 @@
 1.4: /seconds option suggested by
      Volker Moell <volker@die-moells.de>
      help, --help, launch suggested by
-     Jean Delvare <delvare@ensicaen.ismra.fr>
+     Jean Delvare <khali@linux-fr.org>
      Help modified, code cleanup, launch+not added
 
 1.5: License fix, thanks to Janet Casey
@@ -26,7 +26,7 @@
      <torkel@acc.umu.se>
 
 1.6: Added getvol and is_stream functions
-     suggested by Jean Delvare <delvare@ensicaen.ismra.fr>
+     suggested by Jean Delvare <khali@linux-fr.org>
      added xmmsnext.sh xmmsswitch.sh new examples
      added gettime and play list reset to directories (or whatever)
      suggested additions by Craig Emery <ranec@users.sourceforge.net>:
@@ -35,3 +35,13 @@
      added playfiles
      added suggested remove by Michael Schiansky <michael@schiansky.de>
      code cleanup for commands needing one argument
+
+1.7: Added track last and getlength
+     Suggested 'play first' and 'play last' by Jean Delvare
+     can be implemented with
+     play first = xmmsctrl track 1
+     play last  = xmmsctrl track `xmmsctrl getlength`
+                = xmmsctrl track last
+     Added xmmsctrl.spec for rpms by Jan IVEN <jan.iven@cern.ch>
+
+1.8: will incorporate other suggestions

@@ -1,4 +1,5 @@
 #!/bin/sh
+# Play current or goto next song, Alexandre David
 
 if xmmsctrl running; then
  if xmmsctrl playing; then
