@@ -1,20 +1,21 @@
 # The prefix is ignored if you are not the super user and
 # xmmsctrl will be installed in your $HOME/bin
-PREFIX   = /usr/local
+PREFIX   := /usr/local
 
-TARGET   = xmmsctrl
-VERSION  = 1.7
-DIRNAME  = $(shell basename $(PWD))
+TARGET   := xmmsctrl
+VERSION  := 1.8
+DIRNAME  := $(shell basename $(PWD))
 
-CC       = gcc
-WARN     = -Wall -ansi -pedantic -Wshadow -Wmissing-prototypes -W
-CFLAGS   = $(WARN) -O2 $(shell xmms-config --cflags) -DVERSION=\"$(VERSION)\"
-LDFLAGS  = $(shell xmms-config --libs)
+CC       := gcc
+WARN     := -Wall -Wshadow -Wmissing-prototypes -W
+DEFS     := -DPRETTY_PRINT -D_GNU_SOURCE -DVERSION=\"$(VERSION)\"
+CFLAGS   := $(WARN) -O2 $(shell xmms-config --cflags) $(DEFS)
+LDFLAGS  := $(shell xmms-config --libs)
 
 all : $(TARGET) HELP
 
-$(TARGET) : xmmsctrl.c
-	$(CC) -o $(TARGET) xmmsctrl.c $(CFLAGS) $(LDFLAGS)
+$(TARGET) : xmmsctrl.c removefile.c
+	$(CC) -o $(TARGET) xmmsctrl.c removefile.c $(CFLAGS) $(LDFLAGS)
 	strip xmmsctrl
 
 HELP : xmmsctrl

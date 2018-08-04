@@ -6,8 +6,8 @@
  * thus this program.
  * 
  * author: Alexandre David
- * e-mail: adavid@docs.uu.se
- * http://www.docs.uu.se/~adavid
+ * e-mail: adavid@cs.aau.dk
+ * Old web page: http://user.it.uu.se/~adavid/utils/
  * license: GPL
  *
  * See the Changelog file for the change log.
@@ -34,11 +34,13 @@ USA.
 #include <string.h>
 #include <xmms/xmmsctrl.h>  /* provided by xmms-devel */
 
-
-/* This declaration seems to be missing on my system
- * Comment it if your are running Debian
- */
-void usleep(unsigned long usec);
+#ifdef PRETTY_PRINT
+#define COLOR  "\033[1;34m"
+#define NORMAL "\033[0;0m"
+#else
+#define COLOR  ""
+#define NORMAL ""
+#endif
 
 /* returns true if xmms is playing a stream */
 static gboolean is_stream_playing(gint);
@@ -55,12 +57,31 @@ static void print_volume(gint);        /* print volume */
 static void print_time(gint);          /* print played time */
 static void print_current_pos(gint);   /* print current song position in the play list */
 static void play_prev(gint);           /* play the previous track wrapping to the last from the first */
+static void clear_playlist(gint);      /* clear the playlist */
+void unique(gint);                     /* remove duplicates from the play list (in removefile.c) */
 
 /* commands needing an argument, arguments are session number and the read string argument */
 static void set_track(gint,char*);     /* set the current playing song */
 static void set_vol(gint,char*);       /* set the volume */
 static void set_time(gint,char*);      /* set time position */
 static void set_dir(gint,char*);       /* set playing list to directory/file/device */
+static void add_file(gint,char*);      /* add file/dir to playlist */
+static void print(gint,char*);         /* general print */
+static void def_eq(gint,char*);        /* add string if equal to current */
+static void def_neq(gint,char*);       /* add string if not equal to current */
+void remove_file(gint,char*);          /* remove file/dir from playlist (in removefile.c) */
+
+
+/* type for conditional print */
+typedef struct {
+  char *eq;
+  char *neq;
+} CondString;
+
+CondString *condStrings = NULL;
+int nbCondStrings = 0;
+int nbEq = 0;
+int nbNEq = 0;
 
 
 /* type for simple commands */
@@ -74,114 +95,124 @@ typedef struct {
 /* simple command list */
 Command com[]={
   {
+    "clear",
+    clear_playlist,
+    "clear the play list."
+  },
+  {
     "cur" , 
     print_current ,
-    "print the current mp3 song file"
+    "print the current mp3 song file."
   },
   {
     "eject" ,
     xmms_remote_eject ,
-    "open xmms \"Load file(s)\" dialog window"
+    "open xmms \"Load file(s)\" dialog window."
   },
   {
     "getlength" ,
     print_length ,
-    "print the length of the play list"
+    "print the length of the play list."
   },
   {
     "getpos" , 
     print_current_pos ,
-    "print the current mp3 song position in the play list"
+    "print the current mp3 song position in the play list."
   },
   {
     "gettime" ,
     print_time ,
-    "print the current song's playback time in seconds"
+    "print the current song's playback time in seconds."
   },
   {
     "getvol" ,
     print_volume ,
-    "print the master volume value"
+    "print the master volume value."
   },
   {
     "help",
     print_help ,
-    "print this help message"
+    "print this help message."
   },
   {
     "next" , 
     xmms_remote_playlist_next ,
-    "xmms next song command, go to the next song"
+    "xmms next song command, go to the next song."
   },
   {
     "pause" ,
     xmms_remote_pause ,
-    "xmms pause command, pause the playing song"
+    "xmms pause command, pause the playing song."
   },
   {
     "play" ,
     xmms_remote_play ,
-    "xmms play command, play the current song"
+    "xmms play command, play the current song."
   },
   {
     "playlist" ,
     print_playlist ,
-    "print the play list songs"
+    "print the play list songs."
   },
   {
     "playfiles" ,
     print_playfiles ,
-    "print the play list files"
+    "print the play list files."
   },
   {
     "pref" ,
     xmms_remote_show_prefs_box ,
-    "open xmms preference window (as Ctrl-P)"
+    "open xmms preference window (as Ctrl-P)."
   },
   {
     "prev" ,
     xmms_remote_playlist_prev ,
-    "xmms previous song command, go to the previous song"
+    "xmms previous song command, go to the previous song."
   },
   {
     "previous" ,
     play_prev ,
-    "go to the previous song and wrap round to last if position is first"
+    "go to the previous song and wrap round to last if position is first."
   },
   {
     "remove" ,
     remove_from_playlist ,
-    "xmms removes mp3 currently playing from playlist"
+    "xmms removes mp3 currently playing from playlist."
   },
   {
     "repeat" , 
     xmms_remote_toggle_repeat ,
-    "toggle xmms repeat flag"
+    "toggle xmms repeat flag."
   },
   {
     "shuffle" , 
     xmms_remote_toggle_shuffle ,
-    "toggle xmms shuffle flag"
+    "toggle xmms shuffle flag."
   },
   {
     "stop" ,
     xmms_remote_stop ,
-    "xmms stop command, stop playing"
+    "xmms stop command, stop playing."
   },
   {
     "title" ,
     print_current_title ,
-    "print the current mp3 song title"
+    "print the current mp3 song title."
+  },
+  {
+    "uniq" ,
+    unique,
+    "remove duplicate files from the playlist."
   },
   {
     "quit", 
     xmms_remote_quit ,
-    "terminate xmms"
+    "terminate xmms."
   },
   {
     "--help",
     print_help ,
-    "print this help message"
+    "print this help message."
   }
 };
 
@@ -199,37 +230,37 @@ Test test[]={
   {
     "paused" , 
     xmms_remote_is_paused ,
-    "returns OK if xmms is paused"
+    "returns OK if xmms is paused."
   },
   {
     "playing" , 
     xmms_remote_is_playing ,
-    "returns OK if xmms is playing a song"
+    "returns OK if xmms is playing a song."
   },
   {
     "is_equalizer" , 
     xmms_remote_is_eq_win ,
-    "returns OK if xmms has its equalizer window open"
+    "returns OK if xmms has its equalizer window open."
   },
   {
     "is_main" , 
     xmms_remote_is_main_win ,
-    "returns OK if xmms has its main window open"
+    "returns OK if xmms has its main window open."
   },
   {
     "is_play_list" , 
     xmms_remote_is_pl_win ,
-    "returns OK if xmms has its playing list window open"
+    "returns OK if xmms has its playing list window open."
   },
   {
     "is_stream" ,
     is_stream_playing ,
-    "returns OK if xmms is playing a stream (http://somewhere)"
+    "returns OK if xmms is playing a stream (http://somewhere)."
   },
   {
     "running" , 
     xmms_remote_is_running ,
-    "returns OK if xmms is running"
+    "returns OK if xmms is running."
   }
 };
 
@@ -247,17 +278,17 @@ ToggleCommand toggle[]={
   {
     "equalizer" ,
     xmms_remote_eq_win_toggle ,
-    "hide/show xmms equalizer window"
+    "hide/show xmms equalizer window."
   },
   {
     "main" , 
     xmms_remote_main_win_toggle ,
-    "hide/show xmms main window"
+    "hide/show xmms main window."
   },
   {
     "play_list" , 
     xmms_remote_pl_win_toggle ,
-    "hide/show xmms playing list window"
+    "hide/show xmms playing list window."
   }
 };
 
@@ -275,35 +306,81 @@ ArgCommand argcom[]={
   {
     "dir" ,
     set_dir ,
-    "dir <name> : clear the play list and load the (hopefully) directory\n"
-    "              <name> as the play list. This should work with devices\n"
+    COLOR"dir <name>"NORMAL" : clear the play list and load the directory/file\n"
+    "              <name> as the play list. This works with devices\n"
     "              like /dev/cdrom to handle music CDs."
   },
   {
     "time" ,
     set_time ,
-    "time [+|-|/]seconds :\n"
-    "\t seconds : set the playback time to seconds\n"
-    "\t+seconds : advance the playback by seconds\n"
-    "\t-seconds : rewind the playback by seconds\n"
+    COLOR"time [+|-|/]seconds"NORMAL" :\n"
+    "\t seconds : set the playback time to seconds,\n"
+    "\t+seconds : advance the playback by seconds,\n"
+    "\t-seconds : rewind the playback by seconds,\n"
     "\t/seconds : set the playback time to seconds from the end\n"
-    "\t           of the song\n"
-    "    examples : xmmsctrl time 30, xmmsctrl time +10"
+    "\t           of the song.\n"
+    "    Examples : xmmsctrl time 30, xmmsctrl time +10."
   },
   {
     "track" ,
     set_track ,
-    "track <n> : set the n'th track in the play list as the current track\n"
-    "track last : set the last track in the play list as the current track"
+    COLOR"track <n>"NORMAL"  : set the n'th track in the play list as the current track.\n"
+    COLOR" track last"NORMAL" : set the last track in the play list as the current track."
   },
   {
     "vol" ,
     set_vol ,
-    "vol [+|-]percent, with the following effects\n"
-    "\t percent : set the volume to percent\n"
-    "\t+percent : increase the volume with percent\n"
-    "\t-percent : decrease the volume with percent\n"
-    "    examples : xmmsctrl vol 40, xmmsctrl vol +5, xmmsctrl vol -5"
+    COLOR"vol [+|-]percent"NORMAL", with the following effects\n"
+    "\t percent : set the volume to percent,\n"
+    "\t+percent : increase the volume with percent,\n"
+    "\t-percent : decrease the volume with percent.\n"
+    "    Examples : xmmsctrl vol 40, xmmsctrl vol +5, xmmsctrl vol -5."
+  },
+  {
+    "print" ,
+    print ,
+    COLOR"print <string>"NORMAL" : general formatted print, similar to printf. The codes are:\n"
+    "\t%n : new line,\n"
+    "\t%t : tab,\n"
+    "\t%F : current filename,\n"
+    "\t%T : current title,\n"
+    "\t%P : current position,\n"
+    "\t%s : playback time in sec,\n"
+    "\t%m : playback time in min:sec,\n"
+    "\t%S : song length in sec,\n"
+    "\t%M : song length in min:sec,\n"
+    "\t%v : master volume,\n"
+    "\t%l : playlist length,\n"
+    "\t%p : playback time in percent,\n"
+    "\t%(x): where x is a decimal number, evalutation string x depending if the current\n"
+    "\tprinted song == (eq) or != (neq) the currently played song (see playlist2html.sh).\n"
+    "\tIn addition, if the code is preceded by a number (say i), then the song i is\n"
+    "\ttaken instead of the current one. If * is used then print evaluates on all the\n"
+    "\tsongs. Examples: \"%*P: %*T (%*M)%n\" prints the whole playlist,\n"
+    "\t\"%T (%m:%M)%n\" prints only the current song, and \"%3F%n\" prints the 3rd file."
+  },
+  {
+    "eq",
+    def_eq,
+    COLOR"eq"NORMAL" : add evaluation string for the case treated song == current played song."
+  },
+  {
+    "neq",
+    def_neq,
+    COLOR"neq"NORMAL" : add evaluation string for the case treated song != current played song."
+  },
+  {
+    "+file" ,
+    add_file ,
+    COLOR"+file <file>"NORMAL" : add the file/directory to the playlist without clearing the playlist.\n"
+    "\tYou can use 'xmmsctrl +file something uniq' or 'xmmsctrl +file BEGIN dir1 dir2 END uniq' for\n"
+    "\ta cleaner result."
+  },
+  {
+    "-file" ,
+    remove_file ,
+    COLOR"-file <file>"NORMAL" : remove the file/directory from the playlist. You can use\n"
+    "\t'xmmsctrl uniq -file something' for a cleaner result."
   }
 };
 
@@ -316,48 +393,17 @@ ArgCommand argcom[]={
 
 
 /*
- * wrap function to print the length of the playlist
+ * Deprecated printing functions: only callbacks now.
+ * Kept only for backward compatibility.
  */
-static void print_length(gint session) {
-  printf("%d\n", xmms_remote_get_playlist_length(session));
-}
-
-/*
- * wrap function to print the current played mp3 file
- */
-static void print_current(gint session) {
-  printf("%s\n",
-         xmms_remote_get_playlist_file(session,
-                                       xmms_remote_get_playlist_pos(session)));
-}
-
-
-/*
- * wrap function to print the current master volume
- */
-static void print_volume(gint session) {
-  printf("%d\n",
-	 xmms_remote_get_main_volume(session));
-}
-
-
-/*
- * wrap function to print the current playback time in seconds
- */
-static void print_time(gint session) {
-  printf("%d\n",
-	 xmms_remote_get_output_time(session) / 1000);
-}
-
-
-/*
- * wrap function to print the current played mp3 title
- */
-static void print_current_title(gint session) {
-  printf("%s\n",
-         xmms_remote_get_playlist_title(session,
-                                        xmms_remote_get_playlist_pos(session)));
-}  
+static void print_length(gint session)       { print(session, "%l%n"); }
+static void print_current(gint session)      { print(session, "%F%n"); }
+static void print_volume(gint session)       { print(session, "%v%n"); }
+static void print_time(gint session)         { print(session, "%s%n"); }
+static void print_current_title(gint session){ print(session, "%T%n"); }
+static void print_playlist(gint session)     { print(session, "%*P%t%*T%n"); }
+static void print_playfiles(gint session)    { print(session, "%*P%t%*F%n"); }
+static void print_current_pos(gint session)  { print(session, "%P%n"); }
 
 
 /*
@@ -392,59 +438,6 @@ static void play_prev (gint session) {
     xmms_remote_playlist_prev(session);
   else
     xmms_remote_set_playlist_pos(session, xmms_remote_get_playlist_length(session) - 1);
-}
-
-
-/*
- * list the song names of the mp3 songs in the playlist
- */
-static void print_playlist(gint session) {
-  int n = xmms_remote_get_playlist_length(session);
-  int i;
-
-  for ( i = 0 ; i < n ; ) {
-    char *name = xmms_remote_get_playlist_title(session, i);
-
-    /* name == NULL should not happen.
-     * The occurence would be a bug from xmms.
-     * If it happens, it is not dangerous here since (null)
-     * will be output and at least one will see the problem
-
-     if ( name == NULL ) break; */
-
-    printf("%d\t%s\n", ++i, name);
-  }
-}
-
-
-/*
- * list the song files of the mp3 songs in the playlist
- */
-static void print_playfiles(gint session) {
-  int n = xmms_remote_get_playlist_length(session);
-  int i;
-
-  for ( i = 0 ; i < n ; ) {
-    char *name = xmms_remote_get_playlist_file(session, i);
-
-    /* name == NULL should not happen.
-     * The occurence would be a bug from xmms.
-     * If it happens, it is not dangerous here since (null)
-     * will be output and at least one will see the problem
-
-     if ( name == NULL ) break; */
-
-    printf("%d\t%s\n", ++i, name);
-  }
-}
-
-
-/*
- * wrap function to print the current play list position
- */
-static void print_current_pos(gint session) {
-  /* print position + 1 to match the play list output */
-  printf("%d\n", xmms_remote_get_playlist_pos(session)+1);
 }
 
 
@@ -544,11 +537,187 @@ static void set_time(gint session, char *arg) {
 
 
 /*
+ * +file command
+ */
+static void add_file(gint session, char *arg) {
+  xmms_remote_playlist_add_url_string(session, arg);
+}
+
+
+/*
+ * clear command
+ */
+static void clear_playlist(gint session) {
+  xmms_remote_playlist_clear(session);
+}
+
+
+/*
  * dir command: needs a string as argument
  */
 static void set_dir(gint session, char *arg) {
   xmms_remote_playlist_clear(session);
   xmms_remote_playlist_add_url_string(session, arg);
+}
+
+
+/*
+ * ensure capacity of the string table
+ */
+static void ensure_capa(int i) {
+  if (i >= nbCondStrings) {
+    condStrings = (CondString*) realloc(condStrings, (i+10)*sizeof(CondString));
+    memset(&condStrings[i], 0, (i+10-nbCondStrings)*sizeof(CondString));
+    nbCondStrings = i+10;
+  }
+}
+
+
+/*
+ * add eq string
+ */
+static void def_eq(gint unused __attribute__((unused)), char *arg) {
+  ensure_capa(nbEq);
+  condStrings[nbEq++].eq = arg;
+}
+
+/*
+ * add neq string
+ */
+static void def_neq(gint unused __attribute__((unused)), char *arg) {
+  ensure_capa(nbNEq);
+  condStrings[nbNEq++].neq = arg;
+}
+
+
+/*
+ * general print command
+ */
+static void exec_print(gint session, char *arg, int depth) {
+  gint start = xmms_remote_get_playlist_pos( session );
+  gint end = start, i;
+  gint current = start;
+  char *s = arg;
+
+  if (depth > 1000) {
+    fprintf(stderr, "Possibly infinite recursive calls detected. Print aborted.\n");
+    return;
+  }
+
+  /* run for all? */
+  while (*s && !(s[0] == '%' && s[1] == '*')) s++;
+  if (*s) {
+    start = 0;
+    end = xmms_remote_get_playlist_length(session) - 1;
+  }
+
+  for (i = start; i <= end ; ++i) {
+    s = arg;
+    while(*s) {
+
+      if (*s == '%') {
+	gint pos = current;
+	char *info;
+	gint x;
+
+	if (!*++s) break;
+	if (*s == '*') {
+	  pos = i;
+	  if (!*++s) break;
+	}
+	else if (*s >= '0' && *s <= '9') {
+	  pos = *s - '0';
+	  s++;
+	  while(*s >= '0' && *s <= '9') {
+	    pos = 10*pos + *s - '0';
+	    s++;
+	  }
+	  if (--pos < 0) pos = 0;
+	  if (!*s) break;
+	}
+
+	switch(*s) {
+	case 'n': /* newline */
+	  putchar('\n');
+	  break;
+	case 't': /* tab */
+	  putchar('\t');
+	  break;
+	case 'T': /* title */
+	  info = xmms_remote_get_playlist_title(session, pos);
+	  if (info) {
+	    printf("%s", info);
+	    free(info);
+	  }
+	  break;
+	case 'F': /* file */
+	  info = xmms_remote_get_playlist_file(session, pos);
+	  if (info) {
+	    printf("%s", info);
+	    free(info);
+	  }
+	  break;
+	case 'P': /* pos */
+	  printf("%d", pos+1);
+	  break;
+	case 's': /* current sec */
+	  printf("%d", xmms_remote_get_output_time(session) / 1000);
+	  break;
+	case 'S': /* total sec */
+	  printf("%d", xmms_remote_get_playlist_time(session, pos) / 1000);
+	  break;
+	case 'm': /* current min:sec */
+	  x = xmms_remote_get_output_time(session) / 1000;
+	  printf("%d:%-2.2d", x/60, x%60);
+	  break;
+	case 'M': /* total min:sec */
+	  x = xmms_remote_get_playlist_time(session, pos) / 1000;
+	  printf("%d:%-2.2d", x/60, x%60);
+	  break;
+	case 'v': /* volume */
+	  printf("%d", xmms_remote_get_main_volume(session));
+	  break;
+	case 'l': /* playlist length */
+	  printf("%d", xmms_remote_get_playlist_length(session));
+	  break;
+	case 'p': /* percent */
+	  x = xmms_remote_get_playlist_time(session, pos);
+	  if (x) {
+	    printf("%d%%", (100*xmms_remote_get_output_time(session)) / x);
+	  }
+	  break;
+	case '(':
+	  s++;
+	  x = 0;
+	  while(*s && *s >= '0' && *s <= '9') {
+	    x = x*10 + *s - '0';
+	    s++;
+	  }
+	  x--;
+	  if (i == current) {
+	    if (x >= 0 && x < nbEq && condStrings[x].eq) exec_print(session, condStrings[x].eq, depth+1);
+	  } else {
+	    if (x >= 0 && x < nbNEq && condStrings[x].neq) exec_print(session, condStrings[x].neq, depth+1);
+	  }
+	  if (*s != ')') {
+	    fprintf(stderr, "Missing ')' in expression.\n");
+	    return;
+	  }
+	  break;
+	default:
+	  putchar(*s);
+	}
+
+      } else {
+	putchar(*s);
+      }
+      s++;
+    }
+  }
+}
+
+static void print(gint session, char *arg) {
+  exec_print(session, arg, 0);
 }
 
 
@@ -560,49 +729,55 @@ static void print_help(__attribute__ ((unused)) gint dummy) {
   unsigned int i;
 
   /* The string is cut to conform to ISO C89 */
-  puts("XMMSCTRL version "VERSION", main author Alexandre David <adavid@docs.uu.se>:\n"
-       "xmmsctrl is a simple tool designed to be used at the shell level,\n"
+  puts(COLOR"XMMSCTRL version "VERSION NORMAL" (C) Alexandre David <adavid@cs.aau.dk>.\n"
+       "'xmmsctrl' is a simple tool designed to be used at the shell level,\n"
        "typically in a small shell script associated to a keyboard shortcut. There\n"
        "are 4 different command types:\n"
-       "- simple commands, e.g. \"xmmsctrl play\", which perform a simple task\n"
+       "- simple commands, e.g. \"xmmsctrl play\", which perform a simple task,\n"
        "- commands with a flag argument, e.g. \"xmmsctrl main 1\", which set\n"
-       "  a particular state");
+       "  a particular state,");
   puts("- condition testing, e.g. \"xmmsctrl playing\", which can be used in\n"
        "  if statements in shells. Something to notice: this was designed to be\n"
        "  used simply, which is, directly in if statements: if <command>; then\n"
        "  <command>; else <command>; fi. There you put directly \"xmmsctrl playing\"\n"
        "  to test if xmms is playing. Notice how the if statement works: if the\n"
        "  command succeeds, it returns a 0, which means OK, otherwise it returns\n"
-       "  an error code.\n"
-       "- more specific commands with particular arguments");
+       "  an error code,\n"
+       "- more specific commands with particular arguments.");
 
   /** simple commands, 2 special and the rest from the list */
   puts("\n"
-       "The simple commands are\n"
-       " launch : launch a xmms instance if none is running\n"
-       " not : negate the next condition test");
+       "The simple commands are:\n"
+       " "COLOR"launch"NORMAL" : launch a xmms instance if none is running\n"
+       " "COLOR"not"NORMAL" : negate the next condition test");
   for ( i = 0 ; i < NCOM ; i++ )
-    printf(" %s : %s\n", com[i].name, com[i].help);
+    printf(" "COLOR"%s"NORMAL" : %s\n", com[i].name, com[i].help);
 
   /** toggle commands from the list **/
   puts("\n"
-       "The flag setting commands are used with 0 or 1");
+       "The flag setting commands are used with 0 or 1:");
   for ( i = 0 ; i< NTOG ; i++ )
-    printf(" %s : %s\n", toggle[i].name, toggle[i].help);
+    printf(" "COLOR"%s"NORMAL" : %s\n", toggle[i].name, toggle[i].help);
 
   /** test commands from the list **/
   puts("\n"
-       "The condition testing commands are");
+       "The condition testing commands are:");
   for ( i = 0 ; i < NTST ; i++ )
-    printf(" %s : %s\n", test[i].name, test[i].help);
+    printf(" "COLOR"%s"NORMAL" : %s\n", test[i].name, test[i].help);
 
   /** argument commands, one special and the rest from the list **/
   puts("\n"
-       "The other specific commands are\n"
-       " session number : use the session number 'number', xmmsctrl looks\n"
+       "The other specific commands are:\n"
+       " "COLOR"session number"NORMAL" : use the session number 'number', xmmsctrl looks\n"
        "                  automatically for the first working session.\n");
   for ( i = 0 ; i < NARG ; i++ )
     printf(" %s\n\n", argcom[i].help); /* special custom format here */
+
+  /** batch mode */
+  printf("Except for 'session', these command now support a\n"
+	 "batch mode. You can give a list of arguments beginning\n"
+	 "with BEGIN and ending with END, e.g.,\n"
+	 " \txmmsctrl +file BEGIN dir1 dir2 song1 song2 END\n");
 
   /** examples **/
   puts("\n"
@@ -652,7 +827,7 @@ static gint launch_xmms(void) {
 }
 
 
-int main( int argc, char *argv[] ) {
+int main(int argc, char *argv[]) {
   int i = 1;
   unsigned int negate = 0;
   gint session;
@@ -668,9 +843,9 @@ int main( int argc, char *argv[] ) {
       break;
 
   if (session == 16) {  /* no session found     */
-    if (strcmp( argv[1], "launch" ))
+    if (strcmp( argv[1], "launch" )) {
       return 1;         /* error return = false */
-    else {
+    } else {
       i++;
       session = launch_xmms();
     }
@@ -690,10 +865,10 @@ int main( int argc, char *argv[] ) {
 
     }
     /* negation handling */
-    else if ( !strcmp( argv[i], "not" ) )
+    else if ( !strcmp( argv[i], "not" ) ) {
       negate ^= 1;
     /* handle generic commands if the command is not launch */
-    else if ( strcmp( argv[i], "launch" ) ) {
+    } else if ( strcmp( argv[i], "launch" ) ) {
       unsigned int j;
       /* I don't need this, but this improves readability since
        * I avoid 3 nested if statements with it */
@@ -735,11 +910,18 @@ int main( int argc, char *argv[] ) {
 	for( j = 0 ; j < NARG ; j++ ) {
 	  if ( !strcmp( argv[i], argcom[j].name ) ) {
 
-	    if ( ++i < argc ) /* if argument left */
-	      argcom[j].command( session, argv[i] ); /* i < argc here implies argv[i] != NULL */
-	    else
+	    if ( ++i < argc ) { /* if argument left */
+	      if (!strcmp(argv[i], "BEGIN")) {
+		/* enter batch mode */
+		while (++i < argc && strcmp(argv[i], "END"))
+		  argcom[j].command( session, argv[i] );
+	      } else {
+		argcom[j].command( session, argv[i] ); /* i < argc here implies argv[i] != NULL */
+	      }
+	    } else {
 	      fprintf(stderr, "Command %s needs an argument. Usage:\n%s\n",
 		      argcom[j].name, argcom[j].help);
+	    }
 
 	    matched = 1;
 	    break;
@@ -751,5 +933,7 @@ int main( int argc, char *argv[] ) {
     }
   }
   
+  if (condStrings) free(condStrings);
+
   return 0; /* OK result */
 }

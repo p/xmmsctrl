@@ -1,6 +1,6 @@
 Summary: command line control utiity for xmms
 Name: xmmsctrl
-Version: 1.7
+Version: 1.8
 Release: 1
 URL: http://www.docs.uu.se/~adavid
 Source0: %{name}-%{version}.tar.gz

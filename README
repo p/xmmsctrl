@@ -12,3 +12,6 @@ how to use test commands.
 
 The samples directory contains sample scripts
 to illustrate how to use xmmsctrl.
+
+To compile: make
+To install: make install

@@ -1,0 +1,76 @@
+;;======================xmms-transcriber===========
+;; Copyright (C) 2002 Chris Bidmead <bidmead@cix.co.uk>
+;; with considerable help from Olle Hallnas <olle@xmms.org>
+;; and thanks to Alexandre David <adavid@DoCS.UU.SE> who
+;; provides the xmmsctrl code.
+;;
+;; Revised [Tue 30-Mar-04 22:22:22] (Alexandre David)
+;; Revised [Fri 05-Apr-02 18:21:32] (Chris Bidmead)
+;;
+;; This suggested addition to ~/.emacs is free software; you can redistribute
+;; it and/or modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2 of
+;; the License, or (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be
+;; useful, but WITHOUT ANY WARRANTY; without even the implied
+;; warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+;; PURPOSE.  See the GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public
+;; License along with this program; if not, write to the Free
+;; Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+;; MA 02111-1307 USA
+;;
+;; Uses xmmsctrl mostly
+;;
+;; xmmsctrl is currently (Mar 2004) at:
+;; http://user.it.uu.se/~adavid/utils/xmmsctrl-1.8.tar.gz
+
+
+(defun xmms-toggle-pause ()
+   "Toggle the pause function (requires xmmsctrl) to pause or unpause Xmms."
+   (interactive)
+   (shell-command "/usr/local/bin/xmmsctrl pause")
+   (if (shell-command "/usr/local/bin/xmmsctrl playing")
+       (xmms-miniback-skip)))
+
+(defun xmms-back-skip ()
+   "Evoke the skip function (requires xmmsctrl) to skip Xmms back 5 secs."
+   (interactive)
+   (shell-command "/usr/local/bin/xmmsctrl time -5 ; sleep 1"))
+
+(defun xmms-miniback-skip ()
+   "Evoke the skip function (requires xmmsctrl) to skip Xmms back 1 secs.\n\
+    Used internally to do a tiny skip back at each pause.
+    There's probably a much better (but more complex?) way to do this..."
+   (shell-command "/usr/local/bin/xmmsctrl time -1"))
+
+(defun xmms-forward-skip ()
+   "Evoke the skip function (requires xmmsctrl) to skip Xmms forward 5 secs"
+   (interactive)
+   (shell-command "/usr/local/bin/xmmsctrl time +5"))
+
+(defun xmms-insert-position ()
+   "Enter the Xmms file name and current position at the Emacs point"
+   (interactive "*")
+   (shell-command "/usr/local/bin/xmmsctrl cur2")
+   (insert-buffer "*Shell Command Output*"))
+
+;; Suggested key assignments (uncomment to use).  I find these the
+;; most convenient, but they may be depricated as they override some
+;; standard key assignments.
+;;
+;; Apropos, these seem to need to be placed at the end
+;; of the ~/.emacs files, so they don't get munged
+;; by any alternative global-set-key assignments.  In particular
+;; they need to go AFTER the customer-set-variables stuff
+;; because pc-select overwrites our use of the Alt-cursor keys
+
+;(global-set-key [(meta left)]  'xmms-back-skip)
+;(global-set-key [(meta right)] 'xmms-forward-skip)
+;(global-set-key [(meta down)]  'xmms-toggle-pause)
+;(global-set-key [(meta up)]    'xmms-insert-position)
+
+;;===================end xmms-transcriber===========
+

@@ -2,7 +2,7 @@
      => release 1.0
 
 1.1: modification suggested by
-     Marc Prud'hommeaux <marc@apocalypse.org>
+     Marc Prud'hommeaux <marc (at) apocalypse (dot) org>
      to get current playing song.
      small cleaning
      forgot to release :(
@@ -11,29 +11,29 @@
      => release 1.2
 
 1.3: time +/- seconds addition by
-     Christian J. Robinson <infynity@onewest.net>
+     Christian J. Robinson <infynity (at) onewest (dot) net>
 
 1.4: /seconds option suggested by
-     Volker Moell <volker@die-moells.de>
+     Volker Moell <volker (at) die-moells (dot) de>
      help, --help, launch suggested by
-     Jean Delvare <khali@linux-fr.org>
+     Jean Delvare <khali (at) linux-fr (dot) org>
      Help modified, code cleanup, launch+not added
 
 1.5: License fix, thanks to Janet Casey
      usleep Warning fix
      Makefile improvements by Jean Delvare
      Song titles addition by Bjorn Torkelsson
-     <torkel@acc.umu.se>
+     <torkel (at) acc (dot) umu (dot) se>
 
 1.6: Added getvol and is_stream functions
-     suggested by Jean Delvare <khali@linux-fr.org>
+     suggested by Jean Delvare <khali (at) linux-fr (dot) org>
      added xmmsnext.sh xmmsswitch.sh new examples
      added gettime and play list reset to directories (or whatever)
-     suggested additions by Craig Emery <ranec@users.sourceforge.net>:
+     suggested additions by Craig Emery <ranec (at) users (dot) sourceforge (dot) net>:
      getpos, track, playlist
      sorted commands in the help
      added playfiles
-     added suggested remove by Michael Schiansky <michael@schiansky.de>
+     added remove (suggestd by Michael Schiansky <michael (at) schiansky (dot) de>)
      code cleanup for commands needing one argument
 
 1.7: Added track last and getlength
@@ -42,6 +42,20 @@
      play first = xmmsctrl track 1
      play last  = xmmsctrl track `xmmsctrl getlength`
                 = xmmsctrl track last
-     Added xmmsctrl.spec for rpms by Jan IVEN <jan.iven@cern.ch>
+     Added xmmsctrl.spec for rpms by Jan IVEN <jan.iven (at) cern (dot) ch>
 
-1.8: will incorporate other suggestions
+1.8: Suggestions: adding dir asked by dmitry kirsanov <dmitry (at) kirsanov (dot) com>
+     and appending files by Marc A. Tamsky <marc (at) tamsky (dot) com>,
+     pretty printing of played time asked by Chris Bidmead <bidmead (at) cix (dot) co (dot) uk>,
+     and printing of song's length asked by Draco Paladin <paladin (at) techmonkeys (dot)org>.
+     Added +file to add files or directories.
+     Added -file to remove files or directories.
+     Added color printing (use more or less -Rf to view HELP).
+     Added an emacs transcriber from Chris Bidmead <bidmead (at) cix (dot) co (dot) uk>.
+     Added print, a general printing function (deprecates all other printing commands).
+     Fixed memory leaks.
+     Renamed sample scripts with the .sh suffix.
+     Added conditional print (eq,neq).
+     Added uniq command to remove duplicates from the playlist.
+     Added the sample script playlist2html.sh to demonstrate the print command.
+     Added clear to clear the playlist.
